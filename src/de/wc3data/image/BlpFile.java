@@ -5,8 +5,6 @@ import com.sun.image.codec.jpeg.JPEGEncodeParam;
 import com.sun.image.codec.jpeg.JPEGImageDecoder;
 import com.sun.image.codec.jpeg.JPEGImageEncoder;
 import java.awt.Color;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.awt.image.Raster;
@@ -29,20 +27,24 @@ import de.wc3data.mdx.BlizzardDataOutputStream;
  */
 public class BlpFile {
 
-
-    public static void main(String args[]) throws IOException {
-
-        BufferedImage troll = read(new File("C:\\Users\\Karsten\\Desktop\\wc3\\BatTroll.BLP"));
-
-        writePalettedBLP(troll, new File("C:\\Users\\Karsten\\Desktop\\wc3\\BatTroll2.blp"), true, true);
-        
-        writeJpgBLP(troll, new File("C:\\Users\\Karsten\\Desktop\\wc3\\BatTroll3.blp"), true, 0.75f);
-    }
-
+    /**
+     * Loads a blp file into a BufferedImage
+     * @param f
+     * @return
+     * @throws IOException 
+     */
     public static BufferedImage read(File f) throws IOException {
         return read(f.getName(), new FileInputStream(f));
     }
 
+    /**
+     * Reads a blp file from a given input stream.
+     * 
+     * @param name
+     * @param stream
+     * @return
+     * @throws IOException 
+     */
     public static BufferedImage read(String name, InputStream stream)
             throws IOException {
         BlizzardDataInputStream in = new BlizzardDataInputStream(stream);
@@ -145,41 +147,18 @@ public class BlpFile {
         //    return null;
     }
 
-    private static BufferedImage[] generateMipMaps(BufferedImage input) {
-        int num = 0;
-        int curWidth = input.getWidth();
-        int curHeight = input.getHeight();
-        int pow;
-        do {
-            num++;
-            pow = (int) Math.pow(2.0D, num - 1);
-        } while ((pow < curWidth) || (pow < curHeight));
-        BufferedImage[] result = new BufferedImage[num];
-        result[0] = input;
-        for (int i = 1; i < num; i++) {
-            curWidth /= 2;
-            curHeight /= 2;
-            if (curHeight == 0) {
-                curHeight = 1;
-            }
-            if (curWidth == 0) {
-                curWidth = 1;
-            }
-            result[i] = ImageUtils.getScaledInstance(result[(i - 1)], curWidth, curHeight, RenderingHints.VALUE_INTERPOLATION_BILINEAR, true);
-        }
-        return result;
-    }
 
     /**
      *
      * @param b
      * @param f
      * @param useAlpha
+     * @param generateMipMaps
      * @param antiDither if the image is not already indexed, a palette needs to
-     * be generated for this image. false is normal, true trys to avoid dither
+     * be generated for this image. false is normal, true tries to avoid dither
      * @throws IOException
      */
-    public static void writePalettedBLP(BufferedImage b, File f, boolean useAlpha, boolean antiDither) //, boolean increasePalette
+    public static void writePalettedBLP(BufferedImage b, File f, boolean useAlpha, boolean generateMipMaps, boolean antiDither) //, boolean increasePalette
             throws IOException {
         BlizzardDataOutputStream out = new BlizzardDataOutputStream(f);
         out.writeNByteString("BLP1", 4);
@@ -204,15 +183,37 @@ public class BlpFile {
 
         int[] sizes = new int[16];
 
-        for (int i = 0; i < 16; i++) {
-            sizes[i] = size;
-            size /= 4;
+        //Prepare mipmap sizes
+        if(generateMipMaps){
+            for (int i = 0; i < 16; i++) {
+                sizes[i] = size;
+                size /= 4;
+            }
+        }else{
+            int startsize=size;
+            for (int i = 0; i < 16; i++) {
+                if(size != 0){
+                    sizes[i] = startsize;
+                }
+                size /= 4;
+            }
         }
+    
 
         //Write MipMap offsets
-        for (int i = 0; i < 16; i++) {
-            out.writeInt(offset);
-            offset += sizes[i];
+        if(generateMipMaps){
+            for (int i = 0; i < 16; i++) {
+                out.writeInt(offset);
+                offset += sizes[i];
+            }
+        }else{
+            for (int i = 0; i < 16; i++) {
+                if(sizes[i] != 0){
+                    out.writeInt(offset);
+                }else{
+                    out.writeInt(0);
+                }
+            }
         }
 
         //Write MipMap sizes
@@ -221,20 +222,26 @@ public class BlpFile {
         }
 
         //Create Mipmaps
-        BufferedImage[] mips = generateMipMaps(b);
-        BufferedImage[] mips_indexed = new BufferedImage[mips.length];
+        BufferedImage[] mips;
+        BufferedImage[] mips_indexed;
+        
+        if(generateMipMaps){
+            mips = ImageUtils.generateMipMaps(b);
+            
+        }else{
+            mips = new BufferedImage[1];
+            mips[0] = b;
+        }
+        
+        mips_indexed = new BufferedImage[mips.length];
 
         for (int i = 0; i < mips.length; i++) {
             if (mips[i].getType() != BufferedImage.TYPE_BYTE_INDEXED) {
 
                 if (antiDither) {
-                    mips_indexed[i] = antiDitherConvert(mips[i]);
+                    mips_indexed[i] = ImageUtils.antiDitherConvert(mips[i]);
                 } else {
-                    mips_indexed[i] = new BufferedImage(mips[i].getWidth(), mips[i].getHeight(), BufferedImage.TYPE_BYTE_INDEXED);
-                    Graphics2D g = (Graphics2D) mips_indexed[i].getGraphics();
-                    g.drawImage(mips[i], 0, 0, null);
-                    g.dispose();
-
+                    mips_indexed[i] = ImageUtils.changeImageType(mips[i], BufferedImage.TYPE_BYTE_INDEXED);
                 }
             }
         }
@@ -288,20 +295,6 @@ public class BlpFile {
     }
 
     
-    /**
-     * An alternative way to convert an image to type_byte_indexed (paletted).
-     * @param src
-     * @return 
-     */
-    private static BufferedImage antiDitherConvert(BufferedImage src) {
-        BufferedImage convertedImage = new BufferedImage(src.getWidth(), src.getHeight(), BufferedImage.TYPE_BYTE_INDEXED);
-        for (int x = 0; x < src.getWidth(); x++) {
-            for (int y = 0; y < src.getHeight(); y++) {
-                convertedImage.setRGB(x, y, src.getRGB(x, y));
-            }
-        }
-        return convertedImage;
-    }
 
     public static void writeJpgBLP(BufferedImage b, File f, boolean useAlpha, float quality)
             throws IOException {
@@ -326,17 +319,12 @@ public class BlpFile {
         }
 
         //Manipulate Image, Swap Colors
-        BufferedImage newImage;
-
-        if (useAlpha) {
-            newImage = new BufferedImage(b.getWidth(), b.getHeight(), BufferedImage.TYPE_INT_ARGB);//BufferedImage.TYPE_4BYTE_ABGR
-        } else {
-            newImage = new BufferedImage(b.getWidth(), b.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
-        }
-
-        Graphics2D g = newImage.createGraphics();
-        g.drawImage(b, 0, 0, b.getWidth(), b.getHeight(), null);
-        g.dispose();
+        BufferedImage newImage = ImageUtils.convertStandardImageType(b,useAlpha);
+        /*if(b.getType() != BufferedImage.TYPE_INT_ARGB && b.getType() != BufferedImage.TYPE_INT_RGB){
+            newImage = ImageUtils.changeImageType(b, useAlpha? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB);
+        }else{
+            newImage = b;
+        }*/
 
         for (int x = 0; x < newImage.getWidth(); x++) {
             for (int y = 0; y < newImage.getHeight(); y++) {
@@ -349,7 +337,7 @@ public class BlpFile {
         }
 
         //Generate MipMaps
-        BufferedImage[] mips = generateMipMaps(newImage);
+        BufferedImage[] mips = ImageUtils.generateMipMaps(newImage);
         byte[][] imagesBytes = new byte[16][];
 
         int i = 0;
@@ -359,20 +347,16 @@ public class BlpFile {
 
             JPEGImageEncoder jpg = JPEGCodec.createJPEGEncoder(byteOut);
 
-            //ColorConvertOp cco = new ColorConvertOp(ColorSpace.getInstance(ColorSpace.CS_CIEXYZ), null);
-            //image = cco.filter(image, null);
-
             JPEGEncodeParam param = JPEGCodec.getDefaultJPEGEncodeParam(image.getData(), JPEGEncodeParam.COLOR_ID_UNKNOWN);
             param.setQuality(quality, true);
             jpg.setJPEGEncodeParam(param);
-
 
             jpg.encode(image.getData());
             imagesBytes[i] = byteOut.toByteArray();
 
             i++;
         }
-
+        
         //Create the jpg header we want to write
         byte[] newHeader = removeJpgHeaderImageSize(imagesBytes[0], originalHeaderSize);
         int headerSize = newHeader.length;
@@ -387,10 +371,10 @@ public class BlpFile {
                 out.writeInt(0);
             } else {
                 out.writeInt(offset);
-                offset += (imagesByte.length - originalHeaderSize - 1 + mipMapHeaderSize);
+                    offset += (imagesByte.length - originalHeaderSize - 1 + mipMapHeaderSize);
+                }
+                
             }
-
-        }
 
         //Write Mipmap Size
         for (byte[] imagesByte : imagesBytes) {

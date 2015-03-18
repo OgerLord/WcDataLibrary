@@ -15,18 +15,12 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
-import javax.imageio.ImageIO;
 
 /**
  *
  * @author Riven, modified by Oger-Lord
  */
 public class TgaFile {
-    
-    public static void main(String args[]) throws FileNotFoundException, IOException{
-        BufferedImage img = readTGA(new File("C:\\Users\\Karsten\\Desktop\\wc3\\Garrison.tga"));
-        ImageIO.write(img,"png",new File("C:\\Users\\Karsten\\Desktop\\wc3\\Garrison.png"));
-    }
 
     /**
      * Read a TGA image from a file
@@ -147,12 +141,16 @@ public class TgaFile {
      * @throws IOException 
      */
     public static void writeTGA(BufferedImage src, File file) throws IOException {
+        
+         boolean alpha = src.getColorModel().hasAlpha();
+        src = ImageUtils.convertStandardImageType(src, alpha);
+        
         DataBuffer buffer = src.getRaster().getDataBuffer();
-        boolean alpha = src.getColorModel().hasAlpha();
         byte[] data;
 
         if (buffer instanceof DataBufferByte) {
 
+            //Not used anymore because convert to standard image type => Buffer is int
             byte[] pixels = ((DataBufferByte) src.getRaster().getDataBuffer()).getData();
             if (pixels.length != src.getWidth() * src.getHeight() * (alpha ? 4 : 3)) {
                 throw new IllegalStateException();
