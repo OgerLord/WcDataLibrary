@@ -1,8 +1,10 @@
 package de.wc3data.image;
 
 import java.awt.AlphaComposite;
+import java.awt.Color;
 import java.awt.Composite;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 
@@ -76,15 +78,53 @@ public class ImageUtils {
                     h = targetHeight;
                 }
             }
-            BufferedImage tmp = new BufferedImage(w, h, type);
-            Graphics2D g2 = tmp.createGraphics();
-            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, hint);
-            g2.drawImage(ret, 0, 0, w, h, null);
-            g2.dispose();
+            
+            
+            BufferedImage tmp;
+            if(img.getColorModel().hasAlpha() == false){
+                tmp= new BufferedImage(w, h, type);
+                Graphics2D g2 = tmp.createGraphics();
+                g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, hint);
+                g2.drawImage(ret, 0, 0, w, h, null);
+                g2.dispose();
+            }else{
+                //Necessary because otherwise Bilinear resize would couse transparent pixel to change color
+                tmp = resizeWorkAround(ret,w,h, hint);
+            }
 
             ret = tmp;
         } while ((w != targetWidth) || (h != targetHeight));
         return ret;
+    }
+
+    private static BufferedImage resizeWorkAround(BufferedImage ret, int w, int h, Object hint) {
+
+        BufferedImage noAlpha = new BufferedImage(ret.getWidth(), ret.getHeight(), BufferedImage.TYPE_INT_ARGB);
+
+        for (int x = 0; x < ret.getWidth(); x++) {
+            for (int y = 0; y < ret.getHeight(); y++) {
+                int color = ret.getRGB(x, y);
+                color = color | 0xff000000;
+                noAlpha.setRGB(x, y, color);
+            }
+        }
+
+        BufferedImage noAlphaSmall = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = noAlphaSmall.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, hint);
+        g2.drawImage(noAlpha, 0, 0, w, h, null);
+        g2.dispose();
+
+
+        BufferedImage tmp = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        g2 = tmp.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, hint);
+        g2.drawImage(ret, 0, 0, w, h, null);
+        g2.dispose();
+
+        noAlphaSmall.getAlphaRaster().setRect(0, 0, tmp.getAlphaRaster());
+
+        return noAlphaSmall;
     }
 
     /**
@@ -106,30 +146,30 @@ public class ImageUtils {
 
     public static BufferedImage changeImageType(BufferedImage src, int type) {
         BufferedImage img = new BufferedImage(src.getWidth(), src.getHeight(), type);
-        Graphics2D g =  (Graphics2D)img.getGraphics();
+        Graphics2D g = (Graphics2D) img.getGraphics();
 
-        if(img.getColorModel().hasAlpha()){
+        if (img.getColorModel().hasAlpha()) {
             Composite comp = AlphaComposite.getInstance(AlphaComposite.SRC);
             g.setComposite(comp);
         }
-        
+
         g.drawImage(src, 0, 0, null);
         g.dispose();
-        
+
         return img;
     }
-    
-    public static BufferedImage convertStandardImageType(BufferedImage src, boolean useAlpha){
- 
-        if(useAlpha && src.getType() == BufferedImage.TYPE_INT_ARGB){
+
+    public static BufferedImage convertStandardImageType(BufferedImage src, boolean useAlpha) {
+
+        if (useAlpha && src.getType() == BufferedImage.TYPE_INT_ARGB) {
             return src;
         }
-        
-        if(useAlpha == false && src.getType() == BufferedImage.TYPE_INT_RGB){
+
+        if (useAlpha == false && src.getType() == BufferedImage.TYPE_INT_RGB) {
             return src;
         }
-        
-        return ImageUtils.changeImageType(src, useAlpha? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB);
+
+        return ImageUtils.changeImageType(src, useAlpha ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB);
 
     }
 }
