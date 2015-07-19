@@ -25,8 +25,8 @@ public class StreamUtils {
 		model.load(in);
 		return model;
 	}
-
-	public static boolean checkOptionalId(BlizzardDataInputStream in,
+        
+        public static boolean checkOptionalId(BlizzardDataInputStream in,
 			String name) throws IOException {
 
 		in.mark(8);
@@ -38,6 +38,25 @@ public class StreamUtils {
 
 		in.reset();
 		return false;
+	}
+
+	public static String readOptionalId(BlizzardDataInputStream in) throws IOException {
+		in.mark(8);
+                char[] c = in.readChars(4);
+                in.reset();
+                
+                int allEmpty = 0;
+                for(int i = 0;i<4; i++){
+                    if((short)c[0] == -1){
+                        allEmpty++;
+                    }
+                }
+                
+                if(allEmpty == 4){
+                    return null;
+                }
+                
+                return ""+c[0] + c[1]+ c[2]+ c[3];
 	}
 
 	public static void checkId(BlizzardDataInputStream in, String name)

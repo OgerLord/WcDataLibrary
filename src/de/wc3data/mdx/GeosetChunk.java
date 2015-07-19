@@ -62,12 +62,14 @@ public class GeosetChunk {
 		public Extent[] extent = new Extent[0];
 		public int nrOfTextureVertexGroups;
 		public float[] vertexTexturePositions = new float[0];
+                
+                public float[] vertexTexturePositions2 = null;
 
 		public static final String key = "VRTX";
 
 		public void load(BlizzardDataInputStream in) throws IOException {
 			int inclusiveSize = in.readInt();
-			StreamUtils.checkId(in, "VRTX");
+                            StreamUtils.checkId(in, "VRTX");
 			int nrOfVertexPositions = in.readInt();
 			vertexPositions = StreamUtils.loadFloatArray(in,
 					nrOfVertexPositions * 3);
@@ -110,6 +112,13 @@ public class GeosetChunk {
 			int nrOfVertexTexturePositions = in.readInt();
 			vertexTexturePositions = StreamUtils.loadFloatArray(in,
 					nrOfVertexTexturePositions * 2);
+                        
+                        if(StreamUtils.checkOptionalId(in, "UVBS")){
+                            StreamUtils.checkId(in, "UVBS");
+                            int nrOfVertexTexturePositions2 = in.readInt();
+                            vertexTexturePositions2 = StreamUtils.loadFloatArray(in,
+					nrOfVertexTexturePositions2 * 2);
+                        }
 		}
 
 		public void save(BlizzardDataOutputStream out) throws IOException {
@@ -188,6 +197,12 @@ public class GeosetChunk {
 								+ vertexTexturePositions.length + ")");
 			}
 			StreamUtils.saveFloatArray(out, vertexTexturePositions);
+                        
+                        if(vertexTexturePositions2 != null){
+                            out.writeNByteString("UVBS", 4);
+                            out.writeInt(vertexTexturePositions2.length);
+                            StreamUtils.saveFloatArray(out, vertexTexturePositions);
+                        }
 
 		}
 
@@ -234,6 +249,12 @@ public class GeosetChunk {
 			a += 4;
 			a += 4 * vertexTexturePositions.length;
 
+                        if(vertexTexturePositions2 != null){
+                            a += 4;
+                            a += 4;
+                            a += 4 * vertexTexturePositions2.length;
+                        }
+                        
 			return a;
 		}
 
