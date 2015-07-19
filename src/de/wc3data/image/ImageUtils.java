@@ -37,7 +37,7 @@ public class ImageUtils {
             if (curWidth == 0) {
                 curWidth = 1;
             }
-            result[i] = ImageUtils.getScaledInstance(result[(i - 1)], curWidth, curHeight, RenderingHints.VALUE_INTERPOLATION_BILINEAR, true);
+            result[i] = ImageUtils.getScaledInstance(result[(i - 1)], curWidth, curHeight, RenderingHints.VALUE_INTERPOLATION_BICUBIC, true);
         }
         return result;
     }
