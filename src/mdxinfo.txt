@@ -1504,6 +1504,7 @@ struct CameraChunk
     FLOAT3 TargetPosition;
 
     {CameraPositionTranslation}
+    {CameraRotation}
     {CameraTargetTranslation}
   };
 };

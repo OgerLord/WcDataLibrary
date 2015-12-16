@@ -52,6 +52,7 @@ public class CameraChunk {
 		public int nearClippingPlane;
 		public float[] targetPosition = new float[3];
 		public CameraPositionTranslation cameraPositionTranslation;
+                public CameraRotation cameraRotation;
 		public CameraTargetTranslation cameraTargetTranslation;
 
 		public void load(BlizzardDataInputStream in) throws IOException {
@@ -62,10 +63,14 @@ public class CameraChunk {
 			farClippingPlane = in.readInt();
 			nearClippingPlane = in.readInt();
 			targetPosition = StreamUtils.loadFloatArray(in, 3);
-			for (int i = 0; i < 2; i++) {
+			for (int i = 0; i < 3; i++) {
 				if (StreamUtils.checkOptionalId(in, cameraPositionTranslation.key)) {
 					cameraPositionTranslation = new CameraPositionTranslation();
 					cameraPositionTranslation.load(in);
+				} else if (StreamUtils.checkOptionalId(in,
+						cameraRotation.key)) {
+					cameraRotation = new CameraRotation();
+					cameraRotation.load(in);
 				} else if (StreamUtils.checkOptionalId(in,
 						cameraTargetTranslation.key)) {
 					cameraTargetTranslation = new CameraTargetTranslation();
@@ -96,6 +101,9 @@ public class CameraChunk {
 			if (cameraPositionTranslation != null) {
 				cameraPositionTranslation.save(out);
 			}
+                        if (cameraRotation != null) {
+				cameraRotation.save(out);
+			}
 			if (cameraTargetTranslation != null) {
 				cameraTargetTranslation.save(out);
 			}
@@ -113,6 +121,9 @@ public class CameraChunk {
 			a += 12;
 			if (cameraPositionTranslation != null) {
 				a += cameraPositionTranslation.getSize();
+			}
+                        if (cameraRotation != null) {
+				a += cameraRotation.getSize();
 			}
 			if (cameraTargetTranslation != null) {
 				a += cameraTargetTranslation.getSize();
