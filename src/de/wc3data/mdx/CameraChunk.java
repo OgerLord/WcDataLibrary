@@ -47,9 +47,9 @@ public class CameraChunk {
 	public class Camera {
 		public String name = "";
 		public float[] position = new float[3];
-		public int fieldOfView;
-		public int farClippingPlane;
-		public int nearClippingPlane;
+		public float fieldOfView;
+		public float farClippingPlane;
+		public float nearClippingPlane;
 		public float[] targetPosition = new float[3];
 		public CameraPositionTranslation cameraPositionTranslation;
                 public CameraRotation cameraRotation;
@@ -59,9 +59,9 @@ public class CameraChunk {
 			int inclusiveSize = in.readInt();
 			name = in.readCharsAsString(80);
 			position = StreamUtils.loadFloatArray(in, 3);
-			fieldOfView = in.readInt();
-			farClippingPlane = in.readInt();
-			nearClippingPlane = in.readInt();
+			fieldOfView = in.readFloat();
+			farClippingPlane = in.readFloat();
+			nearClippingPlane = in.readFloat();
 			targetPosition = StreamUtils.loadFloatArray(in, 3);
 			for (int i = 0; i < 3; i++) {
 				if (StreamUtils.checkOptionalId(in, cameraPositionTranslation.key)) {
@@ -89,9 +89,9 @@ public class CameraChunk {
 								+ position.length + ")");
 			}
 			StreamUtils.saveFloatArray(out, position);
-			out.writeInt(fieldOfView);
-			out.writeInt(farClippingPlane);
-			out.writeInt(nearClippingPlane);
+			out.writeFloat(fieldOfView);
+			out.writeFloat(farClippingPlane);
+			out.writeFloat(nearClippingPlane);
 			if (targetPosition.length % 3 != 0) {
 				throw new IllegalArgumentException(
 						"The array targetPosition needs either the length 3 or a multiple of this number. (got "

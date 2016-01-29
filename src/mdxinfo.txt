@@ -1498,9 +1498,9 @@ struct CameraChunk
     CHAR[80] Name;
 
     FLOAT3 Position;
-    DWORD FieldOfView;
-    DWORD FarClippingPlane;
-    DWORD NearClippingPlane;
+    FLOAT FieldOfView;
+    FLOAT FarClippingPlane;
+    FLOAT NearClippingPlane;
     FLOAT3 TargetPosition;
 
     {CameraPositionTranslation}
